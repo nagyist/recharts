@@ -1,4 +1,8 @@
-import _ from 'lodash';
+import isString from 'lodash/isString';
+import isNan from 'lodash/isNaN';
+import get from 'lodash/get';
+import lodashIsNumber from 'lodash/isNumber';
+import isNil from 'lodash/isNil';
 
 export const mathSign = (value: number) => {
   if (value === 0) {
@@ -12,11 +16,13 @@ export const mathSign = (value: number) => {
 };
 
 export const isPercent = (value: string | number): value is `${number}%` =>
-  _.isString(value) && value.indexOf('%') === value.length - 1;
+  isString(value) && value.indexOf('%') === value.length - 1;
 
-export const isNumber = (value: unknown): value is number => _.isNumber(value) && !_.isNaN(value);
+export const isNumber = (value: unknown): value is number => lodashIsNumber(value) && !isNan(value);
 
-export const isNumOrStr = (value: unknown): value is number | string => isNumber(value as number) || _.isString(value);
+export const isNullish = (value: unknown): value is null | undefined => isNil(value);
+
+export const isNumOrStr = (value: unknown): value is number | string => isNumber(value as number) || isString(value);
 
 let idCounter = 0;
 export const uniqueId = (prefix?: string) => {
@@ -34,7 +40,7 @@ export const uniqueId = (prefix?: string) => {
  * @return {number} value
  */
 export const getPercentValue = (percent: number | string, totalValue: number, defaultValue = 0, validate = false) => {
-  if (!isNumber(percent as number) && !_.isString(percent)) {
+  if (!isNumber(percent as number) && !isString(percent)) {
     return defaultValue;
   }
 
@@ -47,7 +53,7 @@ export const getPercentValue = (percent: number | string, totalValue: number, de
     value = +percent;
   }
 
-  if (_.isNaN(value)) {
+  if (isNan(value)) {
     value = defaultValue;
   }
 
@@ -72,8 +78,8 @@ export const getAnyElementOfObject = (obj: any) => {
   return null;
 };
 
-export const hasDuplicate = (ary: Array<unknown>) => {
-  if (!_.isArray(ary)) {
+export const hasDuplicate = (ary: Array<any>) => {
+  if (!Array.isArray(ary)) {
     return false;
   }
 
@@ -103,7 +109,7 @@ export const interpolateNumber = (numberA: number, numberB: number) => {
 export function findEntryInArray<T>(
   ary: Array<T>,
   specifiedKey: number | string | ((entry: T) => unknown),
-  specifiedValue: any,
+  specifiedValue: unknown,
 ) {
   if (!ary || !ary.length) {
     return null;
@@ -111,8 +117,7 @@ export function findEntryInArray<T>(
 
   return ary.find(
     entry =>
-      entry &&
-      (typeof specifiedKey === 'function' ? specifiedKey(entry) : _.get(entry, specifiedKey)) === specifiedValue,
+      entry && (typeof specifiedKey === 'function' ? specifiedKey(entry) : get(entry, specifiedKey)) === specifiedValue,
   );
 }
 
@@ -156,4 +161,31 @@ export const getLinearRegression = (data: Array<{ cx?: number; cy?: number }>) =
     a,
     b: (ysum - a * xsum) / len,
   };
+};
+
+/**
+ * Compare values.
+ *
+ * This function is intended to be passed to `Array.prototype.sort()`. It properly compares generic homogeneous arrays that are either `string[]`,
+ * `number[]`, or `Date[]`. When comparing heterogeneous arrays or homogeneous arrays of other types, it will attempt to compare items properly but
+ * will fall back to string comparison for mismatched or unsupported types.
+ *
+ * For some background, `Array.prototype.sort()`'s default comparator coerces each of the array's items into a string and compares the strings. This
+ * often leads to undesirable behavior, especially with numerical items.
+ *
+ * @param {unknown} a The first item to compare
+ * @param {unknown} b The second item to compare
+ * @return {number} A negative number if a < b, a positive number if a > b, 0 if equal
+ */
+export const compareValues = (a: unknown, b: unknown): number => {
+  if (isNumber(a) && isNumber(b)) {
+    return a - b;
+  }
+  if (isString(a) && isString(b)) {
+    return a.localeCompare(b);
+  }
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() - b.getTime();
+  }
+  return String(a).localeCompare(String(b));
 };

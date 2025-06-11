@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { Surface, CartesianAxis } from '../../src';
 
 const CustomizeLabel = ({ x, y }: any) => (
@@ -8,8 +9,8 @@ const CustomizeLabel = ({ x, y }: any) => (
   </text>
 );
 
-const CustomizedTick = ({ x, y }: any) => (
-  <text data-testid="customized-tick" x={x} y={y}>
+const CustomizedTick = ({ x, y, className }: any) => (
+  <text data-testid="customized-tick" x={x} y={y} className={className}>
     test
   </text>
 );
@@ -82,7 +83,7 @@ describe('<CartesianAxis />', () => {
   it('gets font states from its ComputedStyle', () => {
     const myStyle = { fontSize: '14px', letterSpacing: '0.5em' } as CSSStyleDeclaration;
 
-    jest.spyOn(window, 'getComputedStyle').mockReturnValue(myStyle);
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue(myStyle);
 
     render(
       <Surface width={500} height={500}>
@@ -291,5 +292,30 @@ describe('<CartesianAxis />', () => {
     );
 
     expect(container.querySelectorAll('.recharts-cartesian-axis-tick')).toHaveLength(0);
+  });
+
+  it('Renders with merged className when customized tick is provided', () => {
+    render(
+      <Surface width={500} height={500}>
+        <CartesianAxis
+          orientation="bottom"
+          y={100}
+          width={400}
+          height={50}
+          viewBox={{ x: 0, y: 0, width: 500, height: 500 }}
+          ticks={ticks}
+          tick={CustomizedTick}
+          interval={0}
+        />
+      </Surface>,
+    );
+
+    const tickElements = screen.getAllByTestId('customized-tick');
+
+    expect(tickElements).toHaveLength(ticks.length);
+
+    tickElements.forEach(element => {
+      expect(element).toHaveClass('recharts-cartesian-axis-tick-value');
+    });
   });
 });
